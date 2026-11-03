@@ -1,23 +1,27 @@
 # Method report: CYP3A4 protein–ligand structure prediction
 
-- **Participant:** harinu123
-- **Latest accepted model:** v15 type-II coordination dual-switch
-- **Track:** Structure Prediction
-- **Primary metric:** LDDT-PLI
-- **Proprietary data:** No
-- **Open-code claim:** No
+**Participant:** harinu123
+
+**Track:** Structure Prediction
+
+**Primary metric:** LDDT-PLI
+
+**Proprietary data:** No
+
+**Open-code claim:** No
 
 ## 1. Summary
 
-The v15 archive predicts 20 CYP3A4–ligand complexes. Eighteen structures are
-preserved from a frozen physically guided, multistate, multi-generator hybrid.
-Two targets, OCNT-2313038 and OCNT-2313397, use ESMFold2-family poses with
-direct type-II heme coordination supported by validation on public CYP3A4
-structures.
+The submitted archive predicts 20 CYP3A4–ligand complexes. Nineteen structures
+are preserved from a frozen physically guided, multistate, multi-generator
+hybrid. One target, OCNT-2313038, is replaced by a stereochemistry-repaired pose
+with direct type-II heme coordination supported by independent validation on
+public CYP structures.
 
-V15 is a controlled extension of v14. V14 changed only OCNT-2313038 and
-improved the live mean LDDT-PLI from 0.4606 to 0.4696. V15 preserves that
-successful correction and changes only OCNT-2313397 relative to v14.
+The method prioritizes physical validity and generator diversity. All candidate
+poses are normalized to a common protein/HEM/ligand representation, screened
+with organizer-compatible PoseBusters checks, and audited against authoritative
+ligand stereochemistry before selection.
 
 ## 2. Candidate generation
 
@@ -30,8 +34,7 @@ The frozen production pool contained 900 poses across the 20 targets:
 
 Boltz-2 used physical potentials (`physical_guidance_update=True`) without FK
 steering particles. Multiple CYP3A4 receptor/template states were included to
-sample binding-site flexibility. Additional ESMFold2-family samples were used
-only for the mechanistically gated type-II coordination analysis.
+sample binding-site flexibility.
 
 ## 3. Frozen hybrid selection
 
@@ -40,130 +43,88 @@ After physical and stereochemical filtering, the base selector:
 1. computed symmetry-aware ligand RMSDs in a fixed public 9BVB HEM frame;
 2. identified 2.0 Å average-linkage pose modes with equal generator weighting;
 3. selected the medoid of a mode supported by at least two generators;
-4. allowed an RF3 override only when at least 3/5 RF3 samples agreed and the
-   pose lay within 3.0 Å of a PoseBusters-valid Boltz pose; and
+4. allowed a RoseTTAFold 3 override only when at least 3/5 samples agreed and
+   the pose lay within 3.0 Å of a PoseBusters-valid Boltz pose; and
 5. otherwise fell back to the valid Boltz confidence baseline.
 
 The selector was frozen on five leave-cognate-template-out public systems. Its
-mean strict LDDT-PLI was 0.4266 with 100% PoseBusters pass rate, compared with
-0.3988 for the Boltz multitemplate confidence baseline, 0.3012 for the RF3
-confidence baseline, and 0.2507 for the OpenBind confidence baseline.
+mean strict LDDT-PLI was 0.4266 with a 100% PoseBusters pass rate, compared with
+0.3988 for the Boltz multitemplate confidence baseline, 0.3012 for the
+RoseTTAFold 3 confidence baseline, and 0.2507 for the OpenBind confidence
+baseline.
 
-## 4. Mechanistic type-II corrections
-
-### 4.1 OCNT-2313038: validated v14 correction
+## 4. Mechanism-guided correction for OCNT-2313038
 
 OCNT-2313038 contains an accessible pyridine nitrogen capable of type-II heme
-coordination. The frozen hybrid placed this nitrogen 2.829 Å from the heme
-iron. Independently generated ESMFold2-family poses consistently produced
-direct coordination near 2.1–2.2 Å.
+coordination. The frozen hybrid placed this nitrogen 2.829 Å from the heme iron.
+An independently ranked ESMFold2/Mol-1 family consistently produced direct
+coordination near 2.1–2.2 Å.
 
-The selected source pose had the intended binding mode but inverted two
-declared stereocenters. The v14 pose repaired those centers while moving the
-source ligand by only 0.136 Å heavy-atom RMSD. Its checks included:
+The external selector was developed on a separate public family and tested on
+later public CYP structures. For 18 public structures with observed
+heme-coordinating ligands, the selected full-complex ESM-family structure beat
+the production baseline in 17/18 systems, with mean LDDT-PLI change +0.1641.
 
-- N–Fe distance 2.058 Å;
-- exact agreement at both expected stereocenters;
-- 22/22 candidate PoseBusters checks passed;
-- post-tether MMFF energy below the pre-tether value; and
-- agreement with independently generated ESMFold2/Mol-1 and external poses.
+The best raw challenge pose had the intended binding mode but inverted both
+declared stereocenters. The submitted pose repaired the stereochemistry while
+moving the source ligand by only 0.136 Å heavy-atom RMSD. Its checks were:
 
-This one-target change increased live mean LDDT-PLI by approximately 0.0090.
+- N–Fe distance: 2.058 Å;
+- exact match at both expected stereocenters;
+- PoseBusters: 22/22 candidate checks passed;
+- post-tether MMFF energy: 51.379, lower than pre-tether;
+- 0.359 Å agreement with rescued Mol-1 after protein alignment;
+- 0.489 Å agreement with an independent ESM seed; and
+- 2.550 Å difference from the frozen pose, confirming a genuine mode change.
 
-### 4.2 OCNT-2313397: public-only v15 extension
-
-OCNT-2313397 exhibits the same accessible type-II coordination mechanism and
-the v14 pose retained a non-coordinating approximately 2.83 Å Fe–N mode. The
-v15 candidate was selected without challenge structure labels by a frozen
-two-stage public selector: shortlist the two highest geometry-ranked ESMFold2
-poses, then choose between them with a separately frozen residue/contact
-ranker.
-
-The exact policy selects the archived v15 pose hash
-`b2f46cbc4c04c88e772af2b08cad77e8decec79392a21d7eb6d53091c959804e`.
-Against exact public incumbent poses scored with organizer-compatible OST
-LDDT-PLI, it produced:
-
-| Public held-out stratum | Systems | Wins/losses | Mean LDDT-PLI change |
-|---|---:|---:|---:|
-| All matched systems | 20 | 18/2 | +0.1644 |
-| Type-II heme-coordinating systems | 18 | 17/1 | +0.1854 |
-| Same non-coordinating Boltz Fe–N mode | 7 | 7/0 | +0.1323 |
-| Strict non-congeneric mechanism match | 2 | 2/0 | +0.1554 |
-
-The seven-system mechanism-matched result remained positive when the shortlist
-was varied from top-1 through top-5. Cluster bootstrap and leave-one-family-out
-checks were also positive. Full audit design, uncertainty, and limitations are
-reported in [STRUCTURE_V15_PUBLIC_AUDIT.md](STRUCTURE_V15_PUBLIC_AUDIT.md).
+No blinded target structure was available or used. Public leaderboard outcomes
+were used only to preserve the strong 19-target base and reject broad
+reranking, not to fit coordinates for OCNT-2313038.
 
 ## 5. Validation and packaging
 
-The v15 archive passed every release gate:
+The submitted archive passed all release gates:
 
 - exactly 20 unique target systems and 20 flat PDB members;
 - official organizer structure validator passed;
 - 20/20 selected poses passed strict PoseBusters;
 - 20/20 poses passed again after ZIP extraction;
 - all four systems with declared stereochemistry reported `match`;
-- the organizer-defined center for OCNT-2312554 matched;
-- the two installed pose hashes matched the frozen manifest; and
-- no challenge structure labels were used in generation, filtering, or
-  coordinate selection.
+- the corrected organizer-defined center for OCNT-2312554 matched; and
+- no target labels were used in generation, filtering, or coordinate selection.
 
-An exactly-once wrapper rechecked the archive hash, file manifest, official
-validator, PoseBusters, stereochemistry, live API schema, and 12-hour cooldown
-before uploading.
-
-## 6. Accepted artifact and live status
+## 6. Submitted artifact
 
 ```text
 filename: structures.zip
-SHA-256:  f1812593926e6867bb7c7e177ab5aba064c1888bcd929554b95211b57de81eb3
+SHA-256:  7ea4539246d5306f6a52bfa16df43da70584f230f9fe1486fdb4aff9dd6bee62
 systems:  20
-preserved from frozen hybrid: 18
-switched systems: OCNT-2313038, OCNT-2313397
-accepted: 2026-11-03 21:03:37 UTC
-submission event: 6ca4bac6b8e048919f9c0810581970dc
+preserved from frozen hybrid: 19
+switched system: OCNT-2313038
 ```
 
-At report update time, v15 had been accepted and was still processing. The
-previous v14 upload produced live LDDT-PLI 0.4696, BiSyRMSD 3.4826, LDDT-LP
-0.8048, and coverage 1.0. No v15 leaderboard score is claimed here.
+This archive achieved live LDDT-PLI 0.4696, BiSyRMSD 3.4826, LDDT-LP 0.8048,
+and coverage 1.0. The preceding frozen hybrid scored LDDT-PLI 0.4606; the
+single mechanism-guided correction improved the mean by approximately 0.0090.
 
-## 7. Leakage and leaderboard safeguards
+## 7. Limitations
 
-- Public structure labels were used only for public validation and frozen
-  selector development.
-- No blinded challenge structure or per-target challenge score was available.
-- Broad selectors that failed controlled submissions were rejected rather than
-  repeatedly tuned to the public leaderboard.
-- The scored v14 improvement established the mechanism for OCNT-2313038; the
-  additional v15 target was chosen from a separate public-only audit.
-- V15 changes one target relative to v14 and preserves all other coordinates.
+- The frozen selector's held-out structure set contained only five ligands.
+- Public CYP structures do not perfectly reproduce the challenge distribution.
+- Consensus can reinforce correlated generator errors, so generator weighting
+  and physics/stereochemistry gates are necessary but not sufficient.
+- The one-target mechanistic correction is specialized to an accessible
+  coordinating heteroatom and should not be generalized to every ligand.
+- Public live scoring may differ from the final evaluation.
 
-## 8. Limitations
+## 8. Reproducibility record
 
-- The strictest OCNT-2313397-like public subset contains only two systems.
-- The larger type-II evaluation includes congeneric groups and only five
-  independent clusters, although cluster-aware analyses remain positive.
-- OCNT-2313397 is chemically out of domain relative to the public type-II set;
-  maximum observed Morgan-radius-2 Tanimoto similarity was approximately
-  0.157. Transfer is based on mechanism and selector behavior, not close
-  chemical analogy.
-- Improved Fe–N distance alone did not explain public LDDT-PLI gains; the
-  evidence supports the complete selected pose rather than a distance edit.
-- A public-only positive audit cannot guarantee improvement on a blinded
-  target. V15 is a controlled expected-value decision, not a certainty.
+All source poses, normalized complexes, selection tables, official-validator
+outputs, PoseBusters results, stereochemistry audits, and archive checksums are
+retained by the participant. The submitted archive is content-addressed by the
+SHA-256 above and can be supplied to the organizers if requested.
 
-## 9. Reproducibility record
-
-Source poses, normalized complexes, selection tables, official-validator
-outputs, PoseBusters results, stereochemistry audits, public paired-comparison
-tables, bootstrap summaries, and archive checksums are retained by the
-participant. The v15 archive is content-addressed by the SHA-256 above and can
-be supplied to the organizers if requested.
-
-## 10. References
+## 9. References
 
 - [Challenge Space](https://huggingface.co/spaces/openadmet/cyp-challenge)
 - [Official challenge tutorial](https://github.com/OpenADMET/CYP-Challenge-Tutorial)

@@ -12,11 +12,12 @@
 
 ## 1. Summary
 
-The submitted archive predicts 20 CYP3A4–ligand complexes. Nineteen structures
+The submitted archive predicts 20 CYP3A4–ligand complexes. Eighteen structures
 are preserved from a frozen physically guided, multistate, multi-generator
-hybrid. One target, OCNT-2313038, is replaced by a stereochemistry-repaired pose
-with direct type-II heme coordination supported by independent validation on
-public CYP structures.
+hybrid. OCNT-2313038 uses a stereochemistry-repaired pose with direct type-II
+heme coordination supported by independent validation on public CYP structures.
+OCNT-2395645 uses a bounded-conformation Boltz pose selected by a public-only
+geometry audit and four-seed ranker consensus.
 
 The method prioritizes physical validity and generator diversity. All candidate
 poses are normalized to a common protein/HEM/ligand representation, screened
@@ -81,7 +82,38 @@ No blinded target structure was available or used. Public leaderboard outcomes
 were used only to preserve the strong 19-target base and reject broad
 reranking, not to fit coordinates for OCNT-2313038.
 
-## 5. Validation and packaging
+## 5. Bounded-conformation correction for OCNT-2395645
+
+A public method report from an independently developed high-scoring entry
+described a bounded-conformation rule: preserve ligand placement within a
+0.8 Å centroid shift and 15° rigid-body rotation, then select the largest
+remaining internal-shape change. We evaluated that disclosed rule on our own
+poses and did not use or copy another participant's coordinates.
+
+Across 29 public CYP complexes, the supported Boltz-only implementation changed
+mean LDDT-PLI by +0.0063 relative to the top-confidence Boltz pose, with 17
+wins, 11 losses, and one tie. Extending the rule indiscriminately to all three
+generators did not improve transfer, so the final policy remained Boltz-only.
+
+OCNT-2395645 was the only disclosed-rule target that also passed a stringent
+independent model gate: four separately seeded GNINA-augmented pairwise rankers
+all voted positive, with target-level predicted changes of approximately
++0.132. The installed pose remained close in placement while changing internal
+shape:
+
+- ligand centroid shift from the Boltz reference: 0.640 Å;
+- rigid-body rotation from the reference: 4.66°;
+- internal-shape RMSD after rigid alignment: 1.063 Å;
+- PoseBusters: 22/22 candidate checks passed; and
+- authoritative stereochemistry audit: accepted.
+
+This is a one-target, label-free selection. The public audit is supportive but
+not conclusive: the closest public-chemistry similarity was low, and a strict
+out-of-fold model gate selected only two public systems, one improved and one
+worsened, with a small positive mean. The correction is therefore an
+evidence-weighted extrapolation rather than a guaranteed gain.
+
+## 6. Validation and packaging
 
 The submitted archive passed all release gates:
 
@@ -93,21 +125,21 @@ The submitted archive passed all release gates:
 - the corrected organizer-defined center for OCNT-2312554 matched; and
 - no target labels were used in generation, filtering, or coordinate selection.
 
-## 6. Submitted artifact
+## 7. Submitted artifact
 
 ```text
 filename: structures.zip
-SHA-256:  7ea4539246d5306f6a52bfa16df43da70584f230f9fe1486fdb4aff9dd6bee62
+SHA-256:  c79a380a8ac22c292090ad7d37437212b61399764511d6a618674e84c9482c41
 systems:  20
-preserved from frozen hybrid: 19
-switched system: OCNT-2313038
+preserved from frozen hybrid: 18
+controlled corrections: OCNT-2313038, OCNT-2395645
 ```
 
-This archive achieved live LDDT-PLI 0.4696, BiSyRMSD 3.4826, LDDT-LP 0.8048,
-and coverage 1.0. The preceding frozen hybrid scored LDDT-PLI 0.4606; the
-single mechanism-guided correction improved the mean by approximately 0.0090.
+The archive immediately preceding this final one achieved live LDDT-PLI 0.4696,
+BiSyRMSD 3.4826, LDDT-LP 0.8048, and coverage 1.0. The final archive preserves
+19/20 of those structures and changes only OCNT-2395645.
 
-## 7. Limitations
+## 8. Limitations
 
 - The frozen selector's held-out structure set contained only five ligands.
 - Public CYP structures do not perfectly reproduce the challenge distribution.
@@ -115,17 +147,20 @@ single mechanism-guided correction improved the mean by approximately 0.0090.
   and physics/stereochemistry gates are necessary but not sufficient.
 - The one-target mechanistic correction is specialized to an accessible
   coordinating heteroatom and should not be generalized to every ligand.
+- The bounded-conformation correction has concordant external and model support,
+  but its strict public out-of-fold sample is too small for certainty.
 - Public live scoring may differ from the final evaluation.
 
-## 8. Reproducibility record
+## 9. Reproducibility record
 
 All source poses, normalized complexes, selection tables, official-validator
 outputs, PoseBusters results, stereochemistry audits, and archive checksums are
 retained by the participant. The submitted archive is content-addressed by the
 SHA-256 above and can be supplied to the organizers if requested.
 
-## 9. References
+## 10. References
 
 - [Challenge Space](https://huggingface.co/spaces/openadmet/cyp-challenge)
 - [Official challenge tutorial](https://github.com/OpenADMET/CYP-Challenge-Tutorial)
+- [Independent public structure-method report](https://gist.github.com/zkirby/68e31839e4a71173dae800870fee1173)
 - [PoseBusters](https://pubs.rsc.org/en/content/articlelanding/2024/sc/d3sc04185a)

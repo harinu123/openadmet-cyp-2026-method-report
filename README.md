@@ -9,7 +9,7 @@ Structure Prediction track.
 - [CYP3A4 protein–ligand structure prediction](STRUCTURE_METHOD_REPORT.md)
 
 The report describes the frozen candidate-generation and selection pipeline,
-the single mechanism-guided correction used in the submitted archive,
+the two controlled single-target corrections used in the submitted archive,
 public-only validation, leakage safeguards, physical and stereochemical release
 gates, limitations, and the exact artifact checksum.
 

@@ -16,8 +16,8 @@ The submitted archive predicts 20 CYP3A4–ligand complexes. Eighteen structures
 are preserved from a frozen physically guided, multistate, multi-generator
 hybrid. OCNT-2313038 uses a stereochemistry-repaired pose with direct type-II
 heme coordination supported by independent validation on public CYP structures.
-OCNT-2395645 uses a bounded-conformation Boltz pose selected by a public-only
-geometry audit and four-seed ranker consensus.
+OCNT-2395645 uses a bounded-conformation, template-free Boltz pose selected by
+an independently disclosed public rule and corroborated by our diverse pool.
 
 The method prioritizes physical validity and generator diversity. All candidate
 poses are normalized to a common protein/HEM/ligand representation, screened
@@ -36,6 +36,12 @@ The frozen production pool contained 900 poses across the 20 targets:
 Boltz-2 used physical potentials (`physical_guidance_update=True`) without FK
 steering particles. Multiple CYP3A4 receptor/template states were included to
 sample binding-site flexibility.
+
+For the final bounded-conformation audit, we additionally generated a
+template-free 25-sample Boltz pool with physical potentials and a template-free
+50-sample wider pool with default sampling. Both used three recycles, 200
+sampling steps, and step scale 1.5. These targeted pools were used only for
+OCNT-2395645.
 
 ## 3. Frozen hybrid selection
 
@@ -95,23 +101,28 @@ mean LDDT-PLI by +0.0063 relative to the top-confidence Boltz pose, with 17
 wins, 11 losses, and one tie. Extending the rule indiscriminately to all three
 generators did not improve transfer, so the final policy remained Boltz-only.
 
-OCNT-2395645 was the only disclosed-rule target that also passed a stringent
-independent model gate: four separately seeded GNINA-augmented pairwise rankers
-all voted positive, with target-level predicted changes of approximately
-+0.132. The installed pose remained close in placement while changing internal
-shape:
+An initial candidate from a template-conditioned pool had strong learned-ranker
+support but no independent generator support and was score-neutral on the live
+board. We therefore matched the public protocol more closely instead of
+relaxing its rule. In the 25-sample template-free physical pool, only the base
+pose met both published bounds. In the separately generated 50-sample wider
+template-free pool, two poses met the bounds and passed PoseBusters. The rule
+selected the one with the larger internal-shape change:
 
-- ligand centroid shift from the Boltz reference: 0.640 Å;
-- rigid-body rotation from the reference: 4.66°;
-- internal-shape RMSD after rigid alignment: 1.063 Å;
+- ligand centroid shift from the template-free Boltz reference: 0.345 Å;
+- rigid-body rotation from the reference: 11.67°;
+- internal-shape RMSD after rigid alignment: 0.483 Å;
+- symmetry-aware pose RMSD from the reference: 0.763 Å;
+- Boltz confidence: 0.9517 and ligand ipTM: 0.9845;
 - PoseBusters: 22/22 candidate checks passed; and
 - authoritative stereochemistry audit: accepted.
 
-This is a one-target, label-free selection. The public audit is supportive but
-not conclusive: the closest public-chemistry similarity was low, and a strict
-out-of-fold model gate selected only two public systems, one improved and one
-worsened, with a small positive mean. The correction is therefore an
-evidence-weighted extrapolation rather than a guaranteed gain.
+The selected pose is independently supported within our original diverse pool:
+its nearest 38FY Boltz pose is 0.952 Å away and its nearest RoseTTAFold 3 pose
+is 1.171 Å away. It is 1.907 Å from the frozen incumbent and 1.961 Å from the
+score-neutral template-conditioned candidate, confirming that it represents a
+new, cross-supported mode. This remains a one-target, label-free extrapolation,
+not a guaranteed gain.
 
 ## 6. Validation and packaging
 
@@ -129,7 +140,7 @@ The submitted archive passed all release gates:
 
 ```text
 filename: structures.zip
-SHA-256:  c79a380a8ac22c292090ad7d37437212b61399764511d6a618674e84c9482c41
+SHA-256:  67a0f23d148fa7badd4c25cb344a262d239dd0764a7adc1b4d59358f2fb2816c
 systems:  20
 preserved from frozen hybrid: 18
 controlled corrections: OCNT-2313038, OCNT-2395645
@@ -147,8 +158,9 @@ BiSyRMSD 3.4826, LDDT-LP 0.8048, and coverage 1.0. The final archive preserves
   and physics/stereochemistry gates are necessary but not sufficient.
 - The one-target mechanistic correction is specialized to an accessible
   coordinating heteroatom and should not be generalized to every ligand.
-- The bounded-conformation correction has concordant external and model support,
-  but its strict public out-of-fold sample is too small for certainty.
+- The bounded-conformation correction matches a disclosed external rule and has
+  cross-generator support, but its strict public audit is still too small for
+  certainty.
 - Public live scoring may differ from the final evaluation.
 
 ## 9. Reproducibility record

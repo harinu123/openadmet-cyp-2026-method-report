@@ -1,243 +1,193 @@
-# Final method report: CYP time-dependent-inhibition classification
+
+# Prediction of CYP2D6 and CYP3A4 Time-Dependent Inhibition Using Molecular and Assay-Informed Ensembles
 
 **Participant:** harinu123  
-**Final model:** v204  
-**Track:** Classification Prediction  
-**Endpoints:** CYP2D6 and CYP3A4 time-dependent inhibition (TDI)  
-**Primary metric:** macro-averaged Matthews correlation coefficient (MA-MCC)  
-**Proprietary data:** No  
-**Open-code claim:** No
+**Challenge:** OpenADMET CYP Inhibition Blind Challenge  
+**Track:** Time-dependent inhibition classification  
+**Primary metric:** Macro-averaged Matthews correlation coefficient (MA-MCC)  
+**Proprietary data used:** No  
+**Public code release:** No  
 
-## 1. Summary
+## Abstract
 
-The final classifier is a deliberately conservative endpoint-specific rank
-ensemble. CYP3A4 is frozen from the earlier validated v119 lineage. CYP2D6 uses
-a fixed 50-call operating point and combines the v119 molecular/multi-assay
-rank with a parent-series-aware outcome meta-head:
+We developed endpoint-specific ensemble models to predict time-dependent inhibition (TDI) of CYP2D6 and CYP3A4 using publicly available challenge data and pretrained molecular representations. The CYP3A4 classifier combined predictions from a molecular-embedding-based tabular model and a LightGBM ranking model. The CYP2D6 classifier combined a molecular and multi-assay predictor with a second-stage ensemble incorporating parent-compound measurements, analogue-series information, and predictions of assay evaluability and TDI outcome. Model selection used validation splits that separated complete parent/analogue families, with an additional confirmation cohort reserved until the ensemble weight and classification operating point had been fixed. Adding the second-stage CYP2D6 model increased MCC by a mean of 0.1102 across seven development cohorts and by 0.0706 in the confirmation cohort. On the public leaderboard, the submitted predictions achieved an MA-MCC of 0.4474, with endpoint MCCs of 0.3794 for CYP2D6 and 0.5154 for CYP3A4. The submission contained predictions for 750 compounds, including 50 CYP2D6-positive and 224 CYP3A4-positive calls.
 
-```text
-CYP2D6 score = 0.60 × rank(v119)
-             + 0.40 × rank(parent-series outcome meta-head)
-prediction   = positive for the top 50 of 750 compounds
-```
+## 1. Prediction Task
 
-The meta-head averages six LightGBM models, six ExtraTrees models, and one
-regularized logistic regression over 58 deployable assay, molecular, analogue,
-and parent-series features. The final CYP2D6 vector contains 50 positive calls;
-the frozen CYP3A4 vector contains 224.
+The objective was to predict the organizer-defined binary TDI outcomes for CYP2D6 and CYP3A4. The challenge uses a greater-than-two-fold IC50 shift between direct-inhibition and preincubation conditions, together with additional rules for inferred positives and assigned negatives when activity is below the assay's quantification range. Predictions are required for all 750 test compounds, while scoring uses outcomes that the organizers can assign with sufficient confidence.
 
-The final policy, blend weight, and call count were frozen without blinded
-labels and without using leaderboard values as a selection objective. The live
-leaderboard was used only for reporting after submission. An earlier model in
-the lineage did use leaderboard feedback to diagnose an overly aggressive
-operating point; this is disclosed in Section 7.
+Separate classifiers were constructed for the two isoforms. The models produced continuous ranking scores, which were converted to binary predictions using endpoint-specific numbers of positive calls. The primary evaluation metric was the mean of the two endpoint-specific MCC values.
 
-## 2. Task and labels
+The test compounds were obtained through chemical analogue expansion around selected parent compounds. We therefore incorporated information about parent compounds and their analogue series, and used complete parent/analogue families as the principal unit of separation during validation. Here, a parent compound refers to the compound around which an analogue series was constructed.
 
-The track predicts whether a compound exhibits significant time-dependent
-inhibition for CYP2D6 or CYP3A4. The organizer-defined outcome is based on a
-greater-than-two-fold IC50 shift between direct and preincubation/TDI assay
-conditions, including the organizers' rules for confidently inferred outcomes
-where a shift is not directly measurable.
+## 2. Data and Molecular Representations
 
-The final output is binary for each of 750 blinded molecules and each of the
-two isoforms. The operating points were treated as part of the model and were
-validated with complete analogue-family grouping rather than chosen from the
-public leaderboard.
+### 2.1 Training Information
 
-## 3. Data and representations
+Training used the public challenge releases, including official TDI labels, direct-inhibition and TDI-condition pIC50 measurements, pIC50 shifts, maximal-response measurements (Emax), single-concentration screening readouts, and indicators of assay advancement and evaluability. The pIC50 scale is defined as the negative base-10 logarithm of IC50 expressed in molar units. Assay evaluability denotes whether an observation supports an outcome eligible for scoring.
 
-### 3.1 Supervision
+The CYP2D6 development population contained 4,816 proxy observations, including 1,122 observations with official TDI labels: 239 positive and 883 negative. The second-stage classifier used 58 features available for prediction. The larger proxy-population count should therefore be distinguished from the number of officially labelled observations.
 
-The model used the public challenge releases: official TDI labels, direct and
-TDI-condition pIC50 measurements, pIC50 shifts, Emax arms,
-single-concentration readouts, and assay-advancement/scoreability indicators.
-No proprietary assay collection was used.
+No proprietary assay data, blinded test labels, private experimental outcomes, or structure-track ground truth were used.
 
-The final CYP2D6 meta-head fit contained:
+### 2.2 Molecular and Assay Features
 
-- 4,816 proxy-population rows;
-- 1,122 rows with official CYP2D6 TDI outcomes;
-- 239 positive and 883 negative labelled rows; and
-- 58 deployable features.
+The molecular representations included pretrained embeddings obtained using Chemprop and CheMeleon, Morgan fingerprints, and nearest-neighbour summaries. These representations supported predictions of TDI outcome, assay advancement, and assay evaluability. A Chemprop multitask model additionally predicted 28 related assay targets, with missing target values masked during training.
 
-### 3.2 Molecular and assay representations
+The 58-feature CYP2D6 second-stage model combined the following information:
 
-The lineage used public pretrained ChemProp-medium and CheMeleon molecular
-representations, Morgan/fingerprint and nearest-neighbour analogue summaries,
-and a published LightGBM ranking component. ChemProp was also trained as a
-masked multi-assay predictor over 28 related assay targets. The 58-feature v204
-meta-head included:
+| Feature group | Information represented |
+|---|---|
+| Base-model predictions | Precomputed ranks from molecular and assay predictors |
+| Molecular and analogue evidence | Embedding-, fingerprint-, and nearest-neighbour-based summaries of TDI outcome and assay evaluability |
+| Parent-compound measurements | Publicly available parent TDI outcomes, direct-inhibition potency, TDI-condition potency, and potency shifts |
+| Parent and analogue relationships | Query–parent similarity and parent/analogue count features |
+| Cross-isoform information | Assay measurements and selection indicators across CYP isoforms |
+| Within-series summaries | Means, maxima, standard deviations, and ranks within analogue series |
+| Auxiliary predictions | Separately cross-fitted predictions of assay evaluability and conditional TDI outcome |
 
-- frozen v105, v119, and development v128 ranks;
-- embedding, fingerprint, and k-nearest-neighbour outcome/scoreability ranks;
-- parent-compound TDI, direct-potency, TDI-condition, and shift information;
-- parent and query–parent similarity/count features;
-- cross-isoform selection and assay features;
-- within-series mean, maximum, standard deviation, and rank features; and
-- separately cross-fitted scoreability and conditional-outcome predictions.
+Parent and series features were derived from information available at prediction time. They did not use blinded experimental outcomes for the test compounds.
 
-No target-test labels, private wet-lab outcomes, or structure-track ground truth
-were used.
+## 3. Predictive Models
 
-## 4. Model lineage
+### 3.1 Rank Aggregation and Decision Rules
 
-### 4.1 CYP3A4 lineage
+The ensembles combined model rankings to reduce sensitivity to differences in numerical score calibration. Let $R(s)$ denote the rank transform of a score $s$ within the relevant prediction population, oriented so that larger values indicate stronger evidence of a positive TDI outcome. Weighted combinations of these ranks defined the endpoint-specific prediction scores.
 
-The CYP3A4 vector originates from v98 and is unchanged in v105, v119, and v204.
-The v98 rank was:
+Binary predictions were obtained by selecting the highest-scoring compounds at a fixed operating point. The selected operating points were 50 positive calls for CYP2D6 and 224 for CYP3A4 among the 750 test compounds. These call counts were treated as model parameters and evaluated through grouped validation. The ranking scores were not interpreted as calibrated probabilities.
 
-```text
-0.75 × rank(ChemProp-medium → PCA64 → three-seed TabICL mean-minus-SD)
-+ 0.25 × rank(public LightGBM)
-```
+### 3.2 CYP3A4 Classifier
 
-The top 224 compounds were called positive. The 224-call operating point came
-from a 29.855% pooled evaluated-call fraction selected by six-fold rank-based
-validation, avoiding an absolute probability threshold that had previously
-proved calibration-sensitive.
+For CYP3A4, Chemprop molecular embeddings were reduced to 64 dimensions using principal component analysis and supplied to TabICL, a tabular foundation model for in-context learning. Predictions from three random seeds were combined using the mean minus one standard deviation, giving a score that penalized disagreement across seeds. This score was rank-aggregated with the output of a LightGBM ranking model:
 
-### 4.2 CYP2D6 v105 and v119 anchors
+$$
+S_{\mathrm{3A4}}(x)
+=
+0.75\,R\left(
+\mu_{\mathrm{TabICL}}(x)-\sigma_{\mathrm{TabICL}}(x)
+\right)
++
+0.25\,R\left(s_{\mathrm{LightGBM}}(x)\right).
+$$
 
-v105 combined 90.5% of the prior v98 rank with 9.5% of a lower-confidence-bound
-rank from ChemProp-medium and CheMeleon assay-funnel models, then reduced the
-operating point from 65 to 50 calls using chemistry-group validation.
+Here, $\mu_{\mathrm{TabICL}}$ and $\sigma_{\mathrm{TabICL}}$ denote the mean and standard deviation across the three TabICL predictions.
 
-v119 added a 5% rank increment from a ChemProp multi-assay mechanistic head. It
-jointly predicted the continuous measurements underlying the TDI rule and used
-the margin
+Six-fold rank-based validation selected a pooled evaluated-call fraction of 29.855%, yielding 224 positive calls in the submission. The CYP3A4 prediction vector was held fixed during subsequent CYP2D6 model selection.
 
-```text
-min((predicted pIC50 shift - log10(2)) / 0.25,
-    (predicted TDI-condition pIC50 - 4.30) / 0.35)
-```
+### 3.3 CYP2D6 Molecular and Multi-Assay Predictor
 
-The deployed ChemProp score was a lower-confidence bound across three
-frozen-encoder seeds, one last-message-block fine-tune, and one low-learning-rate
-full-encoder fine-tune. Each specification was an ensemble across six
-chemistry-group folds. CYP2D6 remained fixed at 50 calls.
+The CYP2D6 reference predictor combined molecular prediction ranks with auxiliary models of the assay-selection process and a multitask predictor of the continuous measurements underlying the TDI label. A base molecular rank and an assay-selection rank were combined with weights of 0.905 and 0.095, respectively. The assay-selection models used Chemprop and CheMeleon representations and contributed a conservative ensemble score based on a lower-confidence-bound ranking. The reference predictor also incorporated the multitask contribution described below.
 
-### 4.3 Final v204 meta-head
+The multitask component jointly predicted assay quantities relevant to TDI and constructed the following margin:
 
-v204 re-ranked v119 with an outcome head trained to recognize likely negative
-calls near the decision boundary. For each of six random seeds, LightGBM and
-ExtraTrees models were fitted; a class-balanced logistic model provided a
-different inductive bias. The three model-family ranks were averaged as a
-negative-outcome consensus and inverted into a positive-outcome rank.
+$$
+m(x)=
+\min\left\{
+\frac{\widehat{\Delta\mathrm{pIC50}}(x)-\log_{10}(2)}{0.25},
+\frac{\widehat{\mathrm{pIC50}}_{\mathrm{TDI}}(x)-4.30}{0.35}
+\right\}.
+$$
 
-Training observations inside the current v119 top 50 received weight 4,
-positions 51–100 received weight 2, and remaining labelled rows received weight
-1. This concentrates model capacity on decisions capable of changing MCC while
-retaining population context.
+The first term measures the predicted potency shift relative to the two-fold threshold. The second measures predicted potency in the TDI condition relative to a pIC50 of 4.30. Taking the minimum requires support from both quantities for the margin to be positive. The constants 0.25 and 0.35 scale the two contributions; this margin is a model score, not a replacement for the organizers' complete labelling procedure.
 
-The frozen final blend changed only eight CYP2D6 decisions relative to v119:
-four promotions and four demotions. CYP3A4 was byte-for-byte unchanged. Six
-independent final-model seeds produced exactly the same blinded 50-call set.
+The Chemprop score used three random seeds with a frozen encoder, one model with the final message-passing block fine-tuned, and one model with the full encoder fine-tuned at a low learning rate. Each training configuration was ensembled across six folds defined by chemical groups. A lower-confidence-bound summary of these predictions contributed to the reference rank. The CYP2D6 reference predictor used the same 50-positive-call operating point as the final ensemble.
 
-## 5. Leakage controls and validation
+### 3.4 CYP2D6 Parent-Series Classifier
 
-The principal unit of separation was the complete parent/analogue family.
-Every outer validation fit excluded:
+A second-stage classifier used the 58 features described in Section 2.2 to identify likely negative outcomes among highly ranked CYP2D6 candidates. It comprised six LightGBM models, six ExtraTrees models, and one regularized, class-balanced logistic-regression model. The tree models used six random seeds. Predictions were summarized at the model-family level, and the three family-level rankings were averaged to form a negative-outcome consensus. This consensus was inverted to obtain a positive-outcome score.
 
-1. the complete held cohort;
-2. every row sharing a parent molecule with that cohort; and
-3. the confirmation cohort during policy selection.
+Training weights emphasized observations near the classification boundary. Labelled observations in the reference predictor's top 50 received weight 4, observations ranked 51–100 received weight 2, and the remaining labelled observations received weight 1. This weighting increased emphasis on candidates capable of changing the selected positive set while retaining information from the wider labelled population.
 
-All preprocessing and model fits were repeated inside the corresponding
-training partition. The blend weight and call count were fixed before the
-single-read confirmation cohort was inspected.
+The final CYP2D6 score was
 
-### 5.1 Parent-purged development result
+$$
+S_{\mathrm{2D6}}(x)
+=
+0.60\,R\left(s_{\mathrm{molecular/assay}}(x)\right)
++
+0.40\,R\left(s_{\mathrm{parent\ series}}(x)\right),
+$$
 
-Across seven selection cohorts, relative to v119:
+where $s_{\mathrm{molecular/assay}}$ is the reference predictor defined in Section 3.3 and $s_{\mathrm{parent\ series}}$ is the positive-outcome score from the second-stage classifier. The 50 highest-scoring compounds were classified as positive.
 
-| Result | Value |
+## 4. Validation and Model Selection
+
+### 4.1 Separation of Related Compounds
+
+Validation was designed to limit information sharing between related observations. Each outer training partition excluded the held-out cohort and every observation sharing a parent molecule with that cohort. Preprocessing and model fitting were repeated within the corresponding training partition.
+
+Seven cohorts were used for model selection. A separate confirmation cohort was excluded from model selection and evaluated once after the ensemble weight and positive-call count had been fixed. Auxiliary predictions of assay evaluability and conditional outcome were generated by separate cross-fitting procedures.
+
+### 4.2 Selection and Robustness Analysis
+
+The CYP2D6 parent-series classifier was evaluated against the molecular and multi-assay reference predictor at the same 50-positive-call operating point. This comparison assessed the effect of re-ranking while holding the number of positive predictions constant.
+
+After the model specification was fixed, a separate audit repeated selection using nested cohort exclusions. The audit did not read submitted prediction files, blinded labels, or leaderboard scores. Uncertainty in the observed improvement was also assessed using 20,000 bootstrap replicates that jointly resampled cohorts and parent families.
+
+## 5. Results
+
+### 5.1 Internal Validation
+
+Adding the parent-series classifier improved CYP2D6 MCC in six of the seven development cohorts and did not reduce MCC in any cohort.
+
+| Comparison with the molecular and multi-assay reference predictor | Result |
 |---|---:|
-| Mean MCC change | +0.1102 |
-| Worst cohort MCC change | 0.0000 |
-| Non-losing cohorts | 7/7 |
-| Improved cohorts | 6/7 |
-| Untouched confirmation MCC change | +0.0706 |
+| Mean MCC change across development cohorts | +0.1102 |
+| Lowest cohort-level MCC change | 0.0000 |
+| Cohorts with improved MCC | 6/7 |
+| Cohorts with no reduction in MCC | 7/7 |
+| MCC change in the reserved confirmation cohort | +0.0706 |
 
-### 5.2 Post-freeze robustness audit
+The robustness audit selected the 40% parent-series contribution in all seven leave-one-cohort analyses and all 21 leave-two-cohort analyses. Across scored prediction changes in development evaluations, 50 errors were corrected and 25 previously correct predictions became incorrect. The corresponding counts in the confirmation cohort were four and one.
 
-After freezing v204, a separate audit reconstructed the policy without reading
-submission files, blinded labels, or leaderboard metrics:
+The joint cohort/parent-family bootstrap estimated a mean MCC improvement of 0.1087, with a descriptive 95% interval of 0.0033–0.2239. Because the broader development process evaluated multiple hypotheses, this interval summarizes observed robustness and should not be interpreted as a prespecified confirmatory inference.
 
-- nested leave-one-cohort selection chose the 40% meta-head in 7/7 folds;
-- nested leave-two-cohort selection chose it in 21/21 combinations;
-- the policy helped 50 and harmed 25 scored call changes across development;
-- the untouched confirmation cohort recorded four helped and one harmed change;
-- a 20,000-replicate joint cohort/parent-family bootstrap gave a mean MCC
-  change of +0.1087 and a descriptive 95% interval of +0.0033 to +0.2239.
+### 5.2 Prediction Stability
 
-These uncertainty calculations are descriptive because the broader research
-program tested multiple hypotheses; they are not presented as a pristine
-confirmatory p-value.
+Relative to the molecular and multi-assay reference predictor, the final CYP2D6 ensemble changed eight test-set classifications: four compounds entered the positive set and four left it. Six independent final-model seed runs produced the same set of 50 positive predictions. CYP3A4 predictions remained unchanged.
 
-## 6. Final artifact and observed live result
+### 5.3 Public-Leaderboard Performance
 
-The official submission validator passed with 750 unique molecule identifiers,
-50 CYP2D6 calls, and 224 CYP3A4 calls.
+The submission passed the official format validator and contained 750 unique molecule identifiers. The public-leaderboard results recorded after submission on 31 October 2026 were:
 
-```text
-filename: classification_v204_d6_parent_purged_rankblend40_top50_a4_frozen.csv
-SHA-256:  2fbfbbe9cef28d19755d43260afaa50e2dff7ac1f3f49bec2e65c24456d31cab
-```
+| Endpoint | Positive predictions in the full 750-compound submission | Public-leaderboard MCC |
+|---|---:|---:|
+| CYP2D6 | 50 | 0.3794 |
+| CYP3A4 | 224 | 0.5154 |
+| Macro-average | — | **0.4474** |
 
-The first v204 upload was accepted on 2026-10-31 at 05:17 UTC. Its public-half
-score was MA-MCC 0.4474, with CYP2D6 MCC 0.3794 and CYP3A4 MCC 0.5154. These
-leaderboard results were observed only after the model was frozen and were not
-used to modify v204.
+The live leaderboard evaluates one half of the test set, with parent/analogue series kept together within that split. These scores therefore describe performance on the public subset, rather than the final full-test evaluation.
 
-## 7. Leaderboard-use disclosure and anti-overfitting policy
+## 6. Use of Leaderboard Feedback
 
-An early predecessor, v96, used an unstable absolute operating threshold and
-performed poorly. Public feedback was used to diagnose excess CYP3A4 call rate
-and to restore the previously stronger CYP2D6 vector when building v98. From
-that point, operating points were converted to rank/count policies and changes
-were required to pass grouped validation.
+During initial development, public feedback was used to diagnose an excessive CYP3A4 positive-call rate under an absolute-threshold rule and to restore a previously evaluated CYP2D6 prediction set. Subsequent operating points were expressed as rank-based call counts, and proposed changes were assessed through grouped validation.
 
-For v204 specifically:
+For the final CYP2D6 parent-series ensemble, leaderboard metrics were not used to select features, model families, the 40% blending weight, or the 50-positive-call operating point. The reported public score was observed after the specification had been fixed and did not trigger changes to the submitted predictions. Blinded test labels were never available during model development.
 
-- blinded labels were never available;
-- leaderboard metrics did not select the features, learners, 0.40 weight, or
-  50-call operating point;
-- the public live score was reporting-only after submission; and
-- later leaderboard-guided swaps were explicitly prohibited.
+## 7. Discussion and Limitations
 
-Post-v204 experiments involving uncertainty-aware labels, LambdaRank,
-CatBoost, a larger feature panel, scoreability/outcome hurdle models,
-blind-parent deployment purging, boundary-only precision rescue, mechanistic
-residuals, joint assay modelling, metabolite features, external reversible
-potency, and MoLFormer embeddings did not clear the parent-purged promotion
-gates. None replaced v204.
+The internal validation results support the use of parent-compound and analogue-series information to refine CYP2D6 rankings in this challenge setting. The improvement was observed at a fixed number of positive calls, indicating that the second-stage classifier changed which compounds were selected, rather than increasing the number selected. The confirmation-cohort result and repeated cohort-exclusion analyses provide additional evidence that the benefit was not confined to a single development split.
 
-## 8. Limitations
+Several limitations affect interpretation. First, TDI labels depend on assay conditions, censoring, and uncertainty near the two-fold shift threshold. Second, the validation cohorts were retrospective approximations to the challenge's analogue-expansion design and do not constitute an independent prospective experimental evaluation. Third, fixed-count classification assumes that an operating point selected during development remains appropriate for the evaluation population. A change in class prevalence or compound-selection strategy could require recalibration.
 
-- TDI is a difficult, assay-dependent endpoint with substantial censoring and
-  uncertainty near the two-fold shift boundary.
-- Validation cohorts approximate the challenge's analogue-series construction
-  but are retrospective proxies, not a second prospective wet-lab test.
-- Fixed top-k calling improves calibration stability but assumes that class
-  prevalence is reasonably stable between development and final evaluation.
-- Parent-series features can be powerful in this challenge design but may
-  transfer poorly to unrelated chemical distributions.
-- Public leaderboard scores cover only one parent-series half of the test set;
-  the final full-test rank may differ.
+Parent-series information may be particularly useful when related compounds have existing assay measurements, but its contribution may diminish for chemically unrelated compounds or series without measured parents. The observed seed stability demonstrates consistency of the submitted positive set under the tested random seeds; it does not establish calibrated uncertainty for individual predictions. Finally, public-leaderboard performance and descriptive bootstrap intervals should be interpreted in the context of partial test-set evaluation and an adaptive development process.
 
-## 9. Reproducibility record
+## 8. Data, Code, and Reproducibility
 
-Core implementation used Python, pandas, NumPy, SciPy, scikit-learn, LightGBM,
-RDKit-derived molecular features, ChemProp-family pretrained representations,
-and TabICL. Final tree seeds were 20201–20206 with deterministic stable ranking.
-All frozen artifacts were checksummed before upload. Model binaries and full
-feature tables are retained by the participant and can be supplied to the
-organizers if requested.
+The implementation used Python, pandas, NumPy, SciPy, scikit-learn, LightGBM, RDKit-derived molecular features, Chemprop-family representations, and TabICL. The final tree ensembles used random seeds 20201–20206, with deterministic stable ranking. Prediction artifacts were checksummed before submission.
 
-## 10. References
+No proprietary dataset was used. The implementation has not been publicly released. Model binaries and complete feature tables are retained by the participant and can be supplied to the organizers on request.
 
-- [Challenge Space](https://huggingface.co/spaces/openadmet/cyp-challenge)
-- [Official challenge tutorial](https://github.com/OpenADMET/CYP-Challenge-Tutorial)
-- [Challenge announcement](https://www.openadmet.org/blog/announcing-openadmets-cyp-inhibition-blind-challenge/)
-- [Midpoint and evaluation update](https://openadmet.ghost.io/halfway-through-the-openadmet-cyp-challenge/)
+## 9. Conclusion
+
+The submitted approach combined endpoint-specific rank aggregation, multi-assay molecular prediction, and parent-series modelling for CYP TDI classification. Parent-series re-ranking improved CYP2D6 performance across the available development cohorts and the reserved confirmation cohort at a fixed positive-call count. The submitted predictions achieved a public-leaderboard MA-MCC of 0.4474. Evaluation on the complete blinded test set is needed to determine how these results extend beyond the public subset.
+
+## References
+
+1. OpenADMET. [Announcing OpenADMET's CYP Inhibition Blind Challenge](https://www.openadmet.org/blog/announcing-openadmets-cyp-inhibition-blind-challenge/).
+2. OpenADMET. [CYP Challenge Tutorial](https://github.com/OpenADMET/CYP-Challenge-Tutorial).
+3. OpenADMET. [Halfway Through the OpenADMET CYP Challenge](https://openadmet.ghost.io/halfway-through-the-openadmet-cyp-challenge/).
+4. OpenADMET. [CYP Blind Challenge Platform](https://huggingface.co/spaces/openadmet/cyp-challenge).
+5. Heid, E., et al. [Chemprop: A Machine Learning Package for Chemical Property Prediction](https://pubs.acs.org/doi/10.1021/acs.jcim.3c01250). *Journal of Chemical Information and Modeling* **64**(1), 9–17 (2024).
+6. Burns, J. W., et al. [Deep Learning Foundation Models from Classical Molecular Descriptors](https://arxiv.org/abs/2506.15792). *arXiv*, 2506.15792 (2025).
+7. Qu, J., Holzmüller, D., Varoquaux, G., and Le Morvan, M. [TabICL: A Tabular Foundation Model for In-Context Learning on Large Data](https://proceedings.mlr.press/v267/qu25d.html). *Proceedings of Machine Learning Research* **267**, 50817–50847 (2025).

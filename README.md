@@ -2,7 +2,7 @@
 
 This repository documents the final **harinu123** submission to the
 [OpenADMET CYP Inhibition Blind Challenge](https://huggingface.co/spaces/openadmet/cyp-challenge)
-Structure Prediction track.
+Structure Prediction track and the classification track
 
 ## Method report
 

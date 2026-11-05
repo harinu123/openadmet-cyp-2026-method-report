@@ -98,9 +98,7 @@ The submitted archive passed all release gates:
   and physics/stereochemistry gates are necessary but not sufficient.
 - The one-target mechanistic correction is specialized to an accessible
   coordinating heteroatom and should not be generalized to every ligand.
-- The bounded-conformation correction matches a disclosed external rule and has
-  cross-generator support, but its strict public audit is still too small for
-  certainty.
+  
 
 ## 9. Reproducibility record
 

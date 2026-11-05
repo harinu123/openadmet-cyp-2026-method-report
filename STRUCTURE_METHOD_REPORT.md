@@ -36,7 +36,7 @@ The initial production pool contained 45 candidate complexes for each of the 20 
 
 ### 2.1. Boltz-2 sampling across receptor states
 
-Boltz-2 [3] was run with physics-based guidance (`physical_guidance_update=True`) and without FK particle steering. Seven receptor/template sampling arms were used for each ligand. Five arms were initialized from the public CYP3A4 structure **PDB 9BVB**, using seeds 11, 37, 73, 109, and 151. Two additional arms used the public CYP3A4 structural states **PDB 38FU** and **PDB 38FY** [7]. Each arm generated five diffusion samples per target, giving 35 Boltz-2 candidates per ligand.
+Boltz-2 [3] was run with physics-based guidance and without particle steering. Seven receptor/template sampling arms were used for each ligand. Five arms were initialized from the public CYP3A4 structure **PDB 9BVB**, using multiple seeds. Two additional arms used the public CYP3A4 structural states **PDB 38FU** and **PDB 38FY** [7]. Each arm generated five diffusion samples per target, giving 35 Boltz-2 candidates per ligand.
 
 The use of distinct receptor states was intended to account for binding-site flexibility and to reduce dependence on a single template conformation. Physics-based potentials were used to discourage implausible geometries during sampling; FK particle steering was omitted because of its computational cost.
 

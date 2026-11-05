@@ -47,7 +47,7 @@ After physical and stereochemical filtering, the base selector:
 The selector was frozen on five leave-cognate-template-out public systems. Its
 mean strict LDDT-PLI was 0.4266 with a 100% PoseBusters pass rate, compared with
 0.3988 for the Boltz multitemplate confidence baseline, 0.3012 for the
-RoseTTAFold 3 confidence baseline, and 0.2507 for the OpenBind confidence
+RoseTTAFold 3 confidence baseline, and 0.2507 for the FMOM confidence
 baseline.
 
 ## 4. Mechanism-guided correction for OCNT-2313038
